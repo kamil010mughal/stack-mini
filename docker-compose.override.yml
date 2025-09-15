@@ -1,0 +1,6 @@
+services:
+  app:
+    ports:
+      - "8000:8080"    # host:container
+  db:
+    ports: []          # no "5432:5432" on host

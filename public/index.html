@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>TxLabz Demo — Global Low Cost Stack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0b1220;color:#e6eefc}
+    header{padding:28px 16px;background:#111a2e;border-bottom:1px solid #24304a}
+    .wrap{max-width:960px;margin:0 auto}
+    .badge{display:inline-block;padding:6px 10px;border:1px solid #38507c;border-radius:999px;font-size:12px;color:#bcd0ff}
+    h1{font-size:36px;margin:16px 0 8px}
+    p{color:#b7c3dc;line-height:1.6}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:24px}
+    .card{background:#0f1a30;border:1px solid #223458;border-radius:14px;padding:14px}
+    .card h3{margin:6px 0 4px}
+    a.button{display:inline-block;margin-top:12px;padding:10px 14px;background:#1e3a8a;color:#fff;text-decoration:none;border-radius:10px}
+    footer{padding:18px 16px;border-top:1px solid #24304a;color:#8fa6cf}
+    code{background:#0c1526;border:1px solid #223458;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <span class="badge">TxLabz • PoC</span>
+      <h1>Globally fast, low-budget stack</h1>
+      <p>Backend (Node/Express) + Self-managed Postgres (Docker). Cloudflare Tunnel se public URL. </p>
+      <a class="button" href="/db-check">Check Database</a>
+      <a class="button" href="/health">API Health</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h3>Compute</h3>
+        <p>Docker local — later k3s on 3 tiny Hetzner VMs (EU/US/Asia).</p>
+      </div>
+      <div class="card">
+        <h3>Global</h3>
+        <p>Cloudflare CDN/Tunnel abhi — baad me Load Balancer + Pages.</p>
+      </div>
+      <div class="card">
+        <h3>Autoscale</h3>
+        <p>PoD HPA + cluster-autoscaler (k8s stage me).</p>
+      </div>
+      <div class="card">
+        <h3>Costs</h3>
+        <p>Egress ≈ $0 (Cloudflare), VMs ≈ $17–20/mo.</p>
+      </div>
+    </div>
+
+    <h2 style="margin-top:32px">Quick Links</h2>
+    <ul>
+      <li>API Health: <code>/health</code></li>
+      <li>DB Check: <code>/db-check</code></li>
+      <li>pgAdmin: <code>http://localhost:5050</code> (email: <code>admin@admin.com</code>, pass: <code>admin</code>)</li>
+    </ul>
+  </main>
+
+  <footer>
+    <div class="wrap">© TxLabz • Demo stack</div>
+  </footer>
+</body>
+</html>
