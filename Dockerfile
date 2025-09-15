@@ -1,13 +1,13 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Dono files ko explicitly copy karo (wildcard se masla hota rehta hai)
+# Lockfile ko HAMESHA copy karo (wildcard ke bajaye explicit)
 COPY package.json package-lock.json ./
 
-# Agar lock file hai to npm ci, warna npm install (fallback)
+# Lock ho to ci (fast/stable), warna auto fallback to install
 RUN [ -f package-lock.json ] && npm ci --omit=dev || npm install --omit=dev
 
-# Baqi code copy
+# Ab baaki code
 COPY . .
 
 EXPOSE 8000
