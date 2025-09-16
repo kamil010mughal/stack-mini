@@ -2,10 +2,11 @@
 const express = require("express");
 const { Client } = require("pg");
 const app = express();
+
 app.use(express.static("public"));
 const port = 8080;
 
-// env (compose se ayegi)
+// DB config (env se ayega; local-compose defaults bhi rakhe)
 const cfg = () => ({
   host: process.env.DB_HOST || "db",
   user: process.env.DB_USER || "postgres",
@@ -14,13 +15,33 @@ const cfg = () => ({
   port: Number(process.env.DB_PORT || 5432),
 });
 
+// Home
 app.get("/", (_req, res) => {
   res.send(`
-  <h1>Stack Mini ✅</h1>
-  <p><a href="/db-check">/db-check</a> — test Postgres</p>
+    <!doctype html>
+    <html><head><meta charset="utf-8"><title>Stack Mini ✅</title></head>
+    <body style="font-family:system-ui;padding:24px">
+      <h1>Stack Mini ✅</h1>
+      <p><a href="/health">/health</a> — API health</p>
+      <p><a href="/db-check">/db-check</a> — test Postgres</p>
+      <p><a href="/cpu">/cpu</a> — tiny CPU burn (HPA demo)</p>
+    </body></html>
   `);
 });
 
+// Health (readiness/liveness)
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+// HPA demo: ~300ms CPU burn
+app.get("/cpu", (_req, res) => {
+  const end = Date.now() + 300;
+  while (Date.now() < end) Math.sqrt(Math.random());
+  res.json({ ok: true, burn: "300ms" });
+});
+
+// DB check
 app.get("/db-check", async (_req, res) => {
   const c = new Client(cfg());
   try {
@@ -34,4 +55,5 @@ app.get("/db-check", async (_req, res) => {
   }
 });
 
+// Start server (keep this at the very end)
 app.listen(port, () => console.log(`Server on http://localhost:${port}`));
