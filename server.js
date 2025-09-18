@@ -1,3 +1,5 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 import r2Routes from "./routes/r2.js";
 // server.js
 import express from "express";
