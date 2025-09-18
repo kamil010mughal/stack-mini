@@ -1,7 +1,10 @@
+import r2Routes from "./routes/r2.js";
 // server.js
 const express = require("express");
 const { Client } = require("pg");
 const app = express();
+app.use(express.json());
+app.use("/r2", r2Routes);
 
 app.use(express.static("public"));
 const port = 8080;
