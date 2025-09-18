@@ -10,7 +10,7 @@ const {
   R2_SECRET_ACCESS_KEY,
   R2_BUCKET,
   R2_REGION = "auto",
-  R2_ENDPOINT, // e.g. https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+  R2_ENDPOINT,
 } = process.env;
 
 const s3 = new S3Client({
@@ -20,10 +20,10 @@ const s3 = new S3Client({
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
-  forcePathStyle: true, // important for R2
+  forcePathStyle: true,
 });
 
-// POST /r2/presign-put  -> returns { key, putUrl }
+// POST /r2/presign-put -> returns { key, putUrl }
 router.post("/presign-put", async (req, res) => {
   try {
     const { folder = "uploads", contentType = "application/octet-stream" } = req.body || {};

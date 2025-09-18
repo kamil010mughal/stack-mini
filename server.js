@@ -1,6 +1,6 @@
 import r2Routes from "./routes/r2.js";
 // server.js
-const express = require("express");
+import express from "express";
 const { Client } = require("pg");
 const app = express();
 app.use(express.json());
