@@ -35,7 +35,7 @@ router.post("/presign-put", async (req, res) => {
       ContentType: contentType,
     });
 
-    const putUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 }); // 5 min
+    const putUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 });
     res.json({ key, putUrl });
   } catch (e) {
     console.error(e);
@@ -50,7 +50,7 @@ router.get("/presign-get", async (req, res) => {
     if (!key) return res.status(400).json({ error: "key_required" });
 
     const cmd = new GetObjectCommand({ Bucket: R2_BUCKET, Key: key });
-    const getUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 10 }); // 10 min
+    const getUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 10 });
     res.json({ key, getUrl });
   } catch (e) {
     console.error(e);
