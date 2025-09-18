@@ -13,14 +13,23 @@ const {
   R2_ENDPOINT,
 } = process.env;
 
+const makeEndpoint = () => {
+  const ep = (process.env.R2_ENDPOINT || '').replace(/^https?:///, '');
+  const bucket = process.env.R2_BUCKET;
+  // If endpoint already contains bucket., keep it; else prepend bucket.
+  const host = ep.startsWith(`${bucket}.`) ? ep : `${bucket}.${ep}`;
+  return `https://${host}`;
+};
+
 const s3 = new S3Client({
   region: R2_REGION,
-  endpoint: R2_ENDPOINT,
+  endpoint: makeEndpoint(),
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
-  forcePathStyle: true,
+  // IMPORTANT: for virtual-hosted style, pathStyle must be false
+  forcePathStyle: false,
 });
 
 // POST /r2/presign-put -> returns { key, putUrl }
