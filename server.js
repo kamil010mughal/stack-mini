@@ -1,4 +1,5 @@
 import { createRequire } from "module";
+import { imagesRouter } from "./src/routes/images.js";
 const require = createRequire(import.meta.url);
 import r2Routes from "./routes/r2.js";
 // server.js
@@ -7,6 +8,7 @@ const { Client } = require("pg");
 const app = express();
 app.use(express.json());
 app.use("/r2", r2Routes);
+app.use("/images", imagesRouter);
 
 app.use(express.static("public"));
 const port = 8080;
