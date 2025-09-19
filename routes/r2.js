@@ -1,5 +1,7 @@
 import express from "express";
+import https from "https";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@aws-sdk/node-http-handler";
 
 const {
   R2_ACCOUNT_ID,
@@ -18,6 +20,15 @@ const s3 = new S3Client({
   region: R2_REGION,
   endpoint: R2_ENDPOINT,
   forcePathStyle: true, // R2 requires path-style
+  // Force TLS v1.2 (some networks/proxies break TLS1.3 handshakes)
+  httpHandler: new NodeHttpHandler({
+    requestTimeout: 30000,
+    connectionTimeout: 30000,
+    httpsAgent: new https.Agent({
+      minVersion: "TLSv1.2",
+      keepAlive: true,
+    }),
+  }),
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID || "",
     secretAccessKey: R2_SECRET_ACCESS_KEY || "",
