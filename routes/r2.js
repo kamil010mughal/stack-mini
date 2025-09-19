@@ -1,11 +1,8 @@
 import express from "express";
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { v4 as uuidv4 } from "uuid";
-
-const router = express.Router();
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const {
+  R2_ACCOUNT_ID,
   R2_ACCESS_KEY_ID,
   R2_SECRET_ACCESS_KEY,
   R2_BUCKET,
@@ -13,109 +10,68 @@ const {
   R2_ENDPOINT, // e.g. https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 } = process.env;
 
-// Build virtual-hosted endpoint => https://<BUCKET>.<ACCOUNT>.r2.cloudflarestorage.com
-const makeEndpoint = () => {
-  const ep = (R2_ENDPOINT || "").replace(/^https?:\/\//, "");
-  const host = ep.startsWith(`${R2_BUCKET}.`) ? ep : `${R2_BUCKET}.${ep}`;
-  return `https://${host}`;
-};
+if (!R2_BUCKET || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
+  console.error("R2 env missing. Need R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT");
+}
 
 const s3 = new S3Client({
   region: R2_REGION,
-  endpoint: makeEndpoint(),
+  endpoint: R2_ENDPOINT,
+  forcePathStyle: true, // R2 ke liye path-style required
   credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    accessKeyId: R2_ACCESS_KEY_ID || "",
+    secretAccessKey: R2_SECRET_ACCESS_KEY || "",
   },
-  forcePathStyle: false, // virtual-hosted style
 });
 
-// Health/ping (optional)
-router.get("/ping", async (_req, res) => {
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: R2_BUCKET }));
-    res.json({ ok: true, bucket: R2_BUCKET, endpoint: makeEndpoint() });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok: false, error: "r2_unreachable" });
-  }
-});
+const r2Routes = express.Router();
 
-// ---- Server-side UPLOAD (no presign, avoids client TLS issues) ----
-// Send binary body to this route. Example:
-// curl -X POST --data-binary @test.jpg "http://.../r2/upload?folder=images&filename=test.jpg" -H "Content-Type: image/jpeg"
-router.use("/upload", express.raw({ type: "*/*", limit: "50mb" }));
-router.post("/upload", async (req, res) => {
-  try {
-    const folder = req.query.folder || "uploads";
-    const filename = req.query.filename || `${uuidv4()}`;
-    const key = `${folder}/${filename}`;
-    const contentType = req.headers["content-type"] || "application/octet-stream";
-    const body = req.body;
+// Yahan raw body le rahe -> binary upload sahi jayegi (JSON parser se conflict nahi)
+r2Routes.use(express.raw({ type: "*/*", limit: "50mb" }));
 
-    if (!body || !body.length) {
-      return res.status(400).json({ error: "empty_body" });
+// POST /r2/upload?folder=images&filename=test.jpg
+r2Routes.post("/upload", async (req, res) => {
+  try {
+    const folder = (req.query.folder || "").toString().trim();
+    const filename = (req.query.filename || "").toString().trim();
+    if (!folder || !filename) {
+      return res.status(400).json({ ok: false, error: "folder_and_filename_required" });
     }
+    const key = `${folder.replace(/\/+$/,"")}/${filename.replace(/^\/+/, "")}`;
+
+    const contentType = req.header("content-type") || "application/octet-stream";
 
     await s3.send(new PutObjectCommand({
       Bucket: R2_BUCKET,
       Key: key,
-      Body: body,
+      Body: req.body,            // binary buffer
       ContentType: contentType,
     }));
 
-    res.json({ ok: true, key });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok: false, error: "upload_failed" });
+    return res.json({ ok: true, key });
+  } catch (err) {
+    console.error("R2 upload error:", err);
+    return res.status(500).json({ ok: false, error: "upload_failed" });
   }
 });
 
-// ---- Server-side STREAM (no presign GET needed) ----
-// Example: curl -I "http://.../r2/stream?key=images/test.jpg"
-router.get("/stream", async (req, res) => {
+// GET /r2/stream?key=images/test.jpg
+r2Routes.get("/stream", async (req, res) => {
   try {
-    const key = req.query.key;
-    if (!key) return res.status(400).json({ error: "key_required" });
+    const key = (req.query.key || "").toString().trim();
+    if (!key) return res.status(400).json({ ok: false, error: "key_required" });
 
-    const out = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
-    // Copy useful headers
-    if (out.ContentType) res.setHeader("Content-Type", out.ContentType);
-    if (out.ContentLength) res.setHeader("Content-Length", out.ContentLength.toString());
-    if (out.ETag) res.setHeader("ETag", out.ETag);
-    // Stream body
-    out.Body.pipe(res);
-  } catch (e) {
-    console.error(e);
-    res.status(404).json({ error: "not_found_or_fetch_failed" });
+    const data = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+
+    if (data.ContentType) res.setHeader("Content-Type", data.ContentType);
+    if (data.ContentLength) res.setHeader("Content-Length", String(data.ContentLength));
+    if (data.ETag) res.setHeader("ETag", data.ETag);
+
+    data.Body.pipe(res);
+  } catch (err) {
+    console.error("R2 stream error:", err);
+    return res.status(404).json({ ok: false, error: "not_found" });
   }
 });
 
-// ---- Presign (client direct) — kept for later when TLS works ----
-router.post("/presign-put", async (req, res) => {
-  try {
-    const { folder = "uploads", contentType = "application/octet-stream" } = req.body || {};
-    const key = `${folder}/${uuidv4()}`;
-    const cmd = new PutObjectCommand({ Bucket: R2_BUCKET, Key: key, ContentType: contentType });
-    const putUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 });
-    res.json({ key, putUrl });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "failed_to_presign_put" });
-  }
-});
-
-router.get("/presign-get", async (req, res) => {
-  try {
-    const key = req.query.key;
-    if (!key) return res.status(400).json({ error: "key_required" });
-    const cmd = new GetObjectCommand({ Bucket: R2_BUCKET, Key: key });
-    const getUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 10 });
-    res.json({ key, getUrl });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "failed_to_presign_get" });
-  }
-});
-
-export default router;
+export default r2Routes;
