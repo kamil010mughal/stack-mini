@@ -17,7 +17,7 @@ if (!R2_BUCKET || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
 const s3 = new S3Client({
   region: R2_REGION,
   endpoint: R2_ENDPOINT,
-  forcePathStyle: true, // R2 ke liye path-style required
+  forcePathStyle: true, // R2 requires path-style
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID || "",
     secretAccessKey: R2_SECRET_ACCESS_KEY || "",
@@ -26,7 +26,7 @@ const s3 = new S3Client({
 
 const r2Routes = express.Router();
 
-// Yahan raw body le rahe -> binary upload sahi jayegi (JSON parser se conflict nahi)
+// Use raw parser here so binary body stays intact
 r2Routes.use(express.raw({ type: "*/*", limit: "50mb" }));
 
 // POST /r2/upload?folder=images&filename=test.jpg
