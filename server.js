@@ -1,5 +1,5 @@
 import { createRequire } from "module";
-import { imagesRouter } from "./src/routes/images.js";
+import { imagesRouter } from "./routes/images.js";
 const require = createRequire(import.meta.url);
 import r2Routes from "./routes/r2.js";
 // server.js
